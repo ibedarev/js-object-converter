@@ -236,6 +236,43 @@ convertObjects([['arr.[].a.{}', 'arr.[].b.{}.1_b']], src)
 }
 ```
 
+#### Cycle filters
+```javascript
+convertObjects([['arr.[0,1].a.{!1}', 'arr.[].b.{}']], src),
+
+{
+  "arr": [
+    {
+      "b": {
+        "2": "2_1",
+        "3": "3_1"
+      }
+    },
+    {
+      "b": {
+        "2": "2_2",
+        "3": "3_2"
+      }
+    }
+  ]
+}
+```
+
+##### Filter types
+
+Exclude props
+```javascript
+{!a,b,c} 
+[!0,1] //array won't be sorted, so 0 and 1 indexes will be empty
+
+```
+Include props
+```javascript
+{a,b,c} //only a,b,c will be included
+[0]
+[0,1] //only 0,1 will be included
+```
+
 ### Similar projects
 * Dot-Object: https://github.com/rhalff/dot-object *without cycles*
 * object-mapper: https://github.com/wankdanker/node-object-mapper *object cycles?*
