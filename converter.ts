@@ -31,26 +31,37 @@ export function convert(
 
   const { i: cAI, obj: aV } = goThroughPath(a, aPath, true);
   const { i: cBI, obj: bV } = goThroughPath(b, bPath, false);
+  const cycleMatch = cycleRegex.exec(aPath[cAI]);
 
-  if (aPath[cAI] === '{}') {
-    for (const key in aV) {
-      convert(
-        aV,
-        bV,
-        [key, ...aPath.slice(cAI + 1)],
-        [key, ...bPath.slice(cBI + 1)],
-        map,
-      );
-    }
-  } else if (aPath[cAI] === '[]') {
-    for (let i = 0; i < aV.length; i++) {
-      convert(
-        aV,
-        bV,
-        [i as any, ...aPath.slice(cAI + 1)],
-        [i as any, ...bPath.slice(cBI + 1)],
-        map,
-      );
+  if (cycleMatch) {
+    if (cycleMatch) {
+      let keys = ((isObject(aV) || isArray(aV)) && Object.keys(aV)) || [];
+
+      if (cycleMatch[1]) {
+        let cycleRule = cycleMatch[1];
+        const except = cycleRule.startsWith('!');
+        if (except) {
+          cycleRule = cycleRule.replace('!', '');
+        }
+
+        const cycleRules = cycleRule.split(cycleRuleSplitter);
+
+        if (except) {
+          keys = keys.filter((k) => !cycleRules.includes(k));
+        } else {
+          keys = cycleRules;
+        }
+      }
+
+      for (const key of keys) {
+        convert(
+          aV,
+          bV,
+          [key, ...aPath.slice(cAI + 1)],
+          [key, ...bPath.slice(cBI + 1)],
+          map,
+        );
+      }
     }
   } else {
     const res = (aV != null && aV[aPath[cAI]]) || undefined;
@@ -61,12 +72,13 @@ export function convert(
   return b;
 }
 
-const cycleSymbols = new Set(['{}', '[]']);
+const cycleRegex = /[{\[](.*)[}\]]/;
+const cycleRuleSplitter = /\s*,\s*/;
 
 function goThroughPath(obj: any, path: string[], keyIsExist: boolean) {
   let i = 0;
   for (; i < path.length - 1; i++) {
-    if (cycleSymbols.has(path[i])) {
+    if (cycleRegex.test(path[i])) {
       break;
     } else {
       if (keyIsExist) {
@@ -81,19 +93,16 @@ function goThroughPath(obj: any, path: string[], keyIsExist: boolean) {
 }
 
 function createKey(obj: any, currentKey: string, nextKey: string) {
-  switch (nextKey) {
-    case '{}':
-      obj[currentKey] = (isObject(obj[currentKey]) && obj[currentKey]) || {};
-      break;
-    case '[]':
-      obj[currentKey] = (isArray(obj[currentKey]) && obj[currentKey]) || [];
-      break;
-    case nextKey:
-      obj[currentKey] = (isObject(obj[currentKey]) && obj[currentKey]) || {};
-      break;
-    default:
-      return obj;
+  if (nextKey.startsWith('{')) {
+    obj[currentKey] = (isObject(obj[currentKey]) && obj[currentKey]) || {};
+  } else if (nextKey.startsWith('[')) {
+    obj[currentKey] = (isArray(obj[currentKey]) && obj[currentKey]) || [];
+  } else if (nextKey) {
+    obj[currentKey] = (isObject(obj[currentKey]) && obj[currentKey]) || {};
+  } else {
+    return obj;
   }
+
   return obj[currentKey];
 }
 
