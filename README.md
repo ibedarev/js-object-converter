@@ -258,7 +258,7 @@ convertObjects([['arr.[0,1].a.{!1}', 'arr.[].b.{}']], src),
 }
 ```
 
-##### Filter types
+#### Filter types
 
 Exclude props
 ```javascript
